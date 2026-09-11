@@ -1,22 +1,11 @@
 services:
   solid-server:
-    image: solidproject/community-server:${CSS_IMAGE_TAG:-latest}
-    container_name: ${CONTAINER_NAME:-solid-server}
+    image: solidproject/community-server:latest
+    container_name: solid-server
     restart: unless-stopped
 
-    # Values come from .env (see .env.example). Defaults here keep the stack
-    # bootable if a variable is missing, but .env is the source of truth.
-    environment:
-      CSS_PORT: ${CSS_PORT:-3000}
-      CSS_BASE_URL: ${CSS_BASE_URL:-http://localhost:3000/}
-      CSS_CONFIG: ${CSS_CONFIG:-/config/default.json}
-      CSS_ROOT_FILE_PATH: /data
-      CSS_LOGGING_LEVEL: ${CSS_LOGGING_LEVEL:-info}
-
-    # HOST_BIND lets you keep the port private (127.0.0.1) when a reverse
-    # proxy fronts the server in production.
     ports:
-      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-3000}:${CSS_PORT:-3000}"
+      - "${PORT:-3000}:3000"
 
     volumes:
-      - ${DATA_DIR:-./data}:/data
+      - ./data:/data
