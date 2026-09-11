@@ -1,1 +1,21 @@
+# Pod data (bind-mounted into the container)
 data/
+
+# Local environment config — never commit real values
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
