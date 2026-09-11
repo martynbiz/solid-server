@@ -1,0 +1,14 @@
+{
+  "@context": "https://linkedsoftwaredependencies.org/bundles/npm/@solid/community-server/^7.0.0/components/context.jsonld",
+  "@graph": [
+    {
+      "comment": "Replaces the server's built-in root landing page with our own static page (config/root/index.html).",
+      "@type": "Override",
+      "overrideInstance": { "@id": "urn:solid-server:default:RootStaticAsset" },
+      "overrideParameters": {
+        "@type": "StaticAssetEntry",
+        "filePath": "/config/root/index.html"
+      }
+    }
+  ]
+}

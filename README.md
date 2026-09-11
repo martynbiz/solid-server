@@ -243,6 +243,20 @@ By default, anyone who can reach the server can sign up and create their own pod
    ```
 8. **Confirm registration is now closed** — reload the root page; it should show *"Registration is disabled on this server"* instead of a sign-up link. Then confirm your own account still logs in and your pod still loads.
 
+### Replacing the root landing page
+
+Once registration is disabled, the built-in CSS landing page (the one with *"Welcome to Solid"* / *"Registration is disabled"*) still shows at `/`. To replace it with your own page:
+
+- [`config/root-page-override.json`](config/root-page-override.json) overrides `RootStaticAsset` (using the exact mechanism the built-in page's own "Replacing this page" section describes) to point at [`config/root/index.html`](config/root/index.html) instead.
+- It's already wired into [`config/no-registration.json`](config/no-registration.json), so it's live wherever that config is active — no extra steps once you've done the [lockdown above](#first-time-production-setup-create-your-account-then-lock-it-down).
+
+To change the page's content, just edit `config/root/index.html` and restart:
+```sh
+docker compose up -d
+```
+
+This only replaces `/` — it doesn't affect your pod, your account, or anything else on the server.
+
 ## Further reading
 
 - [Solid Project homepage](https://solidproject.org/)

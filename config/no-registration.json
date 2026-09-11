@@ -31,14 +31,16 @@
     "css:config/util/logging/winston.json",
     "css:config/util/representation-conversion/default.json",
     "css:config/util/resource-locker/file.json",
-    "css:config/util/variables/default.json"
+    "css:config/util/variables/default.json",
+    "root-page-override.json"
   ],
   "@graph": [
     {
       "comment": [
         "Identical to the server's built-in config/file.json, EXCEPT account and pod",
         "creation are disabled (css:config/identity/handler/no-accounts-pods.json",
-        "instead of .../default.json).",
+        "instead of .../default.json), and the root landing page is replaced with",
+        "our own (see root-page-override.json and root/index.html).",
         "",
         "Existing accounts, pods, WebID login, and WAC access control are completely",
         "unaffected - this only blocks NEW accounts/pods from being created.",
