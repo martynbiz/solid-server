@@ -6,11 +6,18 @@ services:
 
     # CSS rejects any request that doesn't match its configured base URL, so
     # this MUST be your real public address in production (see .env.example).
+    #
+    # CSS_CONFIG defaults to the image's own built-in file.json (registration
+    # enabled). Set it to /config/no-registration.json once your own account
+    # is created, to lock registration down - see .env.example and the
+    # "Running in production" section of the README.
     environment:
       CSS_BASE_URL: ${CSS_BASE_URL:-http://localhost:3000/}
+      CSS_CONFIG: ${CSS_CONFIG:-config/file.json}
 
     ports:
       - "${PORT:-3000}:3000"
 
     volumes:
       - ./data:/data
+      - ./config:/config:ro

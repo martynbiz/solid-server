@@ -89,6 +89,7 @@ Other apps to try: [Solid OS](https://solidos.solidcommunity.net/), [PodBrowser]
 |---|---|---|
 | `PORT` | `3000` | Port published on the host. Change it in production if 3000 is already in use, and point your reverse proxy here. |
 | `CSS_BASE_URL` | `http://localhost:3000/` | The server's real public URL, trailing slash included. **Required to be correct in production** — see the warning below. |
+| `CSS_CONFIG` | `config/file.json` | Which server config to run. The default (built into the image) has registration enabled. Set to `/config/no-registration.json` to disable it — see [First-time production setup](#first-time-production-setup-create-your-account-then-lock-it-down). |
 
 Copy `.env.example` → `.env`, edit, and re-run `docker compose up -d` to apply.
 
@@ -219,9 +220,28 @@ docker compose pull
 docker compose up -d
 ```
 
-### Restricting who can register
+### First-time production setup: create your account, then lock it down
 
-By default, anyone who can reach the server can sign up and create their own pod. If you want the server to host only your own account (no public sign-up), that's a separate CSS configuration change — ask if you'd like this repo set up that way.
+By default, anyone who can reach the server can sign up and create their own pod. If this server is meant to host only *your* account, run through this once, in order — registration has to be open long enough for you to create your own account, then gets switched off:
+
+1. **Deploy with registration enabled.** This is the default (`CSS_CONFIG=config/file.json`) — don't set `CSS_CONFIG` yet.
+   ```sh
+   docker compose up -d
+   ```
+2. **Go to the registration page**, e.g. `https://solid.example.org/.account/login/password/register/` (or click **Sign up** on the root page).
+3. **Create your one account** — the email/password login for this server (see [Create an account](#4-create-an-account) above).
+4. **Create your Pod/WebID** — click **Create pod**, leave "Create a WebID for me" checked (see [Create your Pod](#5-create-your-pod) above).
+5. **Verify you can log in and access the Pod** — log out, log back in, confirm your WebID and pod resources load correctly. Do this *before* locking anything down, since registration UI won't be reachable afterwards if something needs fixing.
+6. **Disable registration.** In your production `.env`:
+   ```sh
+   CSS_CONFIG=/config/no-registration.json
+   ```
+   This points at [`config/no-registration.json`](config/no-registration.json) in this repo (bind-mounted into the container as `/config`) — it's identical to the default config except account/pod creation is switched off. Your existing account, pod, and login are completely unaffected; only *new* registrations are blocked.
+7. **Restart CSS** to apply it:
+   ```sh
+   docker compose up -d
+   ```
+8. **Confirm registration is now closed** — reload the root page; it should show *"Registration is disabled on this server"* instead of a sign-up link. Then confirm your own account still logs in and your pod still loads.
 
 ## Further reading
 
