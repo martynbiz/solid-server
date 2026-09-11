@@ -25,13 +25,15 @@ So this server is both:
 
 ### 1. Create your `.env`
 
-The host port is read from a `.env` file in this directory. `.env` is gitignored; `.env.example` is the committed template.
+Configuration is read from a `.env` file in this directory. `.env` is gitignored; `.env.example` is the committed template.
 
 ```sh
 cp .env.example .env
 ```
 
-The default (`PORT=3000`) works as-is for local development. In production, change it if port 3000 is already taken on the host.
+The defaults (`PORT=3000`, `CSS_BASE_URL=http://localhost:3000/`) work as-is for local development.
+
+> ⚠ **Deploying this anywhere other than `localhost`?** You *must* set `CSS_BASE_URL` to your real public URL (e.g. `https://solid.example.org/`). CSS rejects any request that doesn't match its configured base URL — get this wrong and you'll see errors like *"Request received for an unsupported path"* / *"This server appears to be misconfigured"* on **every** request, not just sign-up. See [Configuration](#configuration) below.
 
 ### 2. Start the server
 
@@ -83,13 +85,18 @@ Other apps to try: [Solid OS](https://solidos.solidcommunity.net/), [PodBrowser]
 
 ## Configuration
 
-The only setting exposed via `.env` is the host port:
-
 | Variable | Default | What it does |
 |---|---|---|
 | `PORT` | `3000` | Port published on the host. Change it in production if 3000 is already in use, and point your reverse proxy here. |
+| `CSS_BASE_URL` | `http://localhost:3000/` | The server's real public URL, trailing slash included. **Required to be correct in production** — see the warning below. |
 
 Copy `.env.example` → `.env`, edit, and re-run `docker compose up -d` to apply.
+
+> ⚠ **Why `CSS_BASE_URL` matters:** CSS treats every incoming request's Host/URL as either inside or outside this configured base URL, and rejects anything outside it — including its own account/sign-up API. If you're running behind a reverse proxy (nginx, Caddy, Traefik) on a real domain:
+> 1. Set `CSS_BASE_URL` to that domain, e.g. `CSS_BASE_URL=https://solid.example.org/`.
+> 2. Make sure the reverse proxy forwards the original request info via a `Forwarded` header (or `X-Forwarded-Proto` / `X-Forwarded-Host`), so CSS can see the real scheme and host rather than assuming `localhost`.
+>
+> Symptoms of getting this wrong: a "Registration is disabled" message even though registration is enabled, or a full-page CSS error reading *"Request received for an unsupported path"* — both mean the base URL (or the proxy headers feeding it) don't match the address you're actually visiting.
 
 ## Key concepts, quick reference
 
@@ -128,9 +135,93 @@ curl http://localhost:3000/my-pod/profile/card
 
 ## Notes on this setup
 
-- This is configured for **local development only** — it's served over plain HTTP on `localhost:3000`, with no TLS, and no external hostname. It's fine for experimenting with the Solid protocol and building/testing apps locally, but isn't hardened for exposing to the internet as-is.
-- If you want to expose this pod to others or to real apps (not just localhost testing), you'll need a public hostname + HTTPS (Solid strongly prefers/requires this in practice for interop with most clients), which typically means fronting it with a reverse proxy (e.g. Caddy/nginx) and changing the server's configured base URL.
+- The defaults in this repo are for **local development** — plain HTTP on `localhost:3000`, no TLS, no external hostname. See [Running in production](#running-in-production) below before exposing this to the internet.
 - `.env` is gitignored and `.env.example` is not, so keep real values out of `.env.example` — it should only ever hold placeholders.
+
+## Running in production
+
+Solid clients expect HTTPS in practice, and CSS doesn't terminate TLS itself, so production means putting a reverse proxy in front of it. Checklist:
+
+### 1. Point a domain at your host
+
+You need a real hostname (e.g. `solid.example.org`) with DNS pointing at the machine running Docker.
+
+### 2. Put a reverse proxy in front, terminating TLS
+
+The proxy must forward the original request's scheme/host so CSS can validate it against `CSS_BASE_URL` (see the warning in [Configuration](#configuration) — get this wrong and *everything* breaks, not just sign-up).
+
+**Caddy** (simplest — handles HTTPS certificates automatically):
+```
+solid.example.org {
+    reverse_proxy localhost:3000
+}
+```
+Caddy sends `X-Forwarded-*` headers by default, so no extra config is needed.
+
+**nginx** (needs the forwarded headers set explicitly):
+```nginx
+server {
+    listen 443 ssl;
+    server_name solid.example.org;
+
+    ssl_certificate     /etc/letsencrypt/live/solid.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/solid.example.org/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        # WebSocket support (CSS uses this for live notifications)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+### 3. Set your production `.env`
+
+On the production host (this file is *not* the one committed to the repo):
+
+```sh
+PORT=3000
+CSS_BASE_URL=https://solid.example.org/
+```
+
+`CSS_BASE_URL` must exactly match the public address, trailing slash included.
+
+### 4. Keep the raw port off the public internet
+
+The reverse proxy should be the only public entry point. Either firewall port `3000` so it's only reachable from `localhost`, or bind Docker's port mapping to loopback only by changing `docker-compose.yml`:
+
+```yaml
+ports:
+  - "127.0.0.1:${PORT:-3000}:3000"
+```
+
+### 5. Deploy
+
+```sh
+docker compose up -d
+docker compose logs -f
+```
+
+### 6. Back up `./data`
+
+Every pod's data lives in `./data` as plain files. Back it up like you would any other stateful volume — there's no separate database to worry about.
+
+### 7. Upgrading
+
+Consider pinning the image to a specific version instead of `latest` (e.g. `solidproject/community-server:7.2.0` in `docker-compose.yml`) so an upstream release can't change your server under you. Bump it deliberately, then:
+```sh
+docker compose pull
+docker compose up -d
+```
+
+### Restricting who can register
+
+By default, anyone who can reach the server can sign up and create their own pod. If you want the server to host only your own account (no public sign-up), that's a separate CSS configuration change — ask if you'd like this repo set up that way.
 
 ## Further reading
 
